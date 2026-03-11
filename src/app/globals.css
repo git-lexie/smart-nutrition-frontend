@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+/* 1. Theme Variables & Tailwind v4 Config */
+@theme {
+  --color-background-start: rgb(248, 250, 252);
+  --color-background-end: rgb(255, 255, 255);
+}
+
+/* 2. Variable Definitions */
+:root {
+  --foreground-rgb: 15, 23, 42;
+  --background-start-rgb: 248, 250, 252;
+  --background-end-rgb: 255, 255, 255;
+}
+
+/* 3. Manual Dark Mode Toggle Support */
+.dark {
+  --foreground-rgb: 248, 250, 252;
+  --background-start-rgb: 15, 23, 42;
+  --background-end-rgb: 2, 6, 23;
+}
+
+/* 4. Base Styles */
+@layer base {
+  body {
+    color: rgb(var(--foreground-rgb));
+    background: linear-gradient(
+        to bottom,
+        rgb(var(--background-start-rgb)),
+        rgb(var(--background-end-rgb))
+      );
+    min-height: 100vh;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    overscroll-behavior-y: none;
+    font-family: var(--font-sans);
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* 5. Custom Utilities & Animations */
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none; 
+    scrollbar-width: none; 
+  }
+
+  .animate-in {
+    animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+}
+
+/* 6. Keyframes */
+@keyframes slideUp {
+  from { 
+    transform: translateY(20px); 
+    opacity: 0; 
+  }
+  to { 
+    transform: translateY(0); 
+    opacity: 1; 
+  }
+}
+
+/* 7. Glass Effect Utility */
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dark .glass-card {
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
