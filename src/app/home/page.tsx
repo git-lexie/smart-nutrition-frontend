@@ -8,7 +8,7 @@ import { saveOfflineSession, getOfflineSessions, clearSyncedSessions } from '@/l
 import OnboardingModal from '@/components/OnboardingModal';
 import foodDatabase from '@/components/foodDatabase'; 
 import { 
-  User, Activity, Bluetooth, Plus, Trash2, 
+  User, Activity, Bluetooth, Plus, Trash2, Edit2,
   Loader2, Sparkles, History, Dumbbell, ChevronRight, X, Timer, Zap, Mic, Volume2, Info
 } from 'lucide-react';
 
@@ -26,7 +26,7 @@ const useSpeech = (gender: 'male' | 'female' = 'female') => {
 
   const speak = useCallback((text: string) => {
     if (!text) return;
-    window.speechSynthesis.cancel(); 
+    window.speechSynthesis.cancel(); // Stop any current speech
     
     const utterance = new SpeechSynthesisUtterance(text);
     // Attempt to find a voice matching the gender preference
@@ -137,9 +137,10 @@ export default function HomePage() {
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   
-  // History State
+  // History & Editing State
   const [history, setHistory] = useState<any[]>([]);
   const [openSessionId, setOpenSessionId] = useState<string | null>(null);
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
 
   // Status State
   const [loadingAI, setLoadingAI] = useState(false);
@@ -174,11 +175,11 @@ export default function HomePage() {
         headers: { Authorization: `Bearer ${authToken}` }
       });
       
-      // Pass the specific IDs of the sessions we just successfully synced
-      await clearSyncedSessions(offlineData.map((d: any) => d.id as number)); 
       
+      await clearSyncedSessions(offlineData.map((d: any) => d.id as number)); 
       await fetchHistory(authToken);
       speak("System online. Offline data has been synchronized.");
+
     } catch (err) {
       console.error("Sync to MongoDB failed", err);
     } finally {
@@ -217,7 +218,7 @@ export default function HomePage() {
     };
   }, [router, syncOfflineData, fetchHistory, speak]);
 
-  // --- VOICE & WELCOME LOGIC ---
+  // --- 2. VOICE & WELCOME LOGIC ---
   useEffect(() => {
     if (user && user.name) {
       const hasWelcomed = sessionStorage.getItem('hasWelcomed');
@@ -258,7 +259,7 @@ export default function HomePage() {
     recognition.onend = () => setIsListening(false);
   };
 
-  // --- ACTIONS & CALCULATIONS ---
+  // --- 3. ACTIONS & CALCULATIONS ---
   const dailyStandard = useMemo(() => {
     if (!user?.profile) return { calories: 0, protein: 0, carbs: 0, fats: 0 };
     const { weight, height, age, gender, activityLevel, goal } = user.profile;
@@ -308,19 +309,19 @@ export default function HomePage() {
 
   const plateTotals = useMemo(() => {
     return foodList.reduce((acc, curr) => ({
-      calories: acc.calories + (curr.macros?.calories || 0),
-      protein: acc.protein + (curr.macros?.protein || 0),
-      carbs: acc.carbs + (curr.macros?.carbs || 0),
-      fats: acc.fats + (curr.macros?.fats || 0),
+      calories: acc.calories + (curr.macros?.calories ?? curr.calories ?? 0),
+      protein: acc.protein + (curr.macros?.protein ?? curr.protein ?? 0),
+      carbs: acc.carbs + (curr.macros?.carbs ?? curr.carbs ?? 0),
+      fats: acc.fats + (curr.macros?.fats ?? curr.fats ?? 0),
     }), { calories: 0, protein: 0, carbs: 0, fats: 0 });
   }, [foodList]);
 
   const unsavedPlateTotals = useMemo(() => {
     return foodList.filter(item => !item.isSaved).reduce((acc, curr) => ({
-      calories: acc.calories + (curr.macros?.calories || 0),
-      protein: acc.protein + (curr.macros?.protein || 0),
-      carbs: acc.carbs + (curr.macros?.carbs || 0),
-      fats: acc.fats + (curr.macros?.fats || 0),
+      calories: acc.calories + (curr.macros?.calories ?? curr.calories ?? 0),
+      protein: acc.protein + (curr.macros?.protein ?? curr.protein ?? 0),
+      carbs: acc.carbs + (curr.macros?.carbs ?? curr.carbs ?? 0),
+      fats: acc.fats + (curr.macros?.fats ?? curr.fats ?? 0),
     }), { calories: 0, protein: 0, carbs: 0, fats: 0 });
   }, [foodList]);
 
@@ -431,6 +432,71 @@ export default function HomePage() {
     setShowSuggestions(false);
   };
 
+  // --- EDIT & DELETE LOGIC ---
+  const handleDeleteSession = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this session?")) return;
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+      await axios.delete(`${baseUrl}/api/user/session/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setHistory(prev => prev.filter(s => s._id !== id));
+      if (openSessionId === id) setOpenSessionId(null);
+      speak("Session successfully deleted.");
+    } catch (err) {
+      console.error("Delete failed", err);
+      speak("Could not delete the session.");
+    }
+  };
+
+  const handleEditSession = (session: any) => {
+    setEditingSessionId(session._id || session.id); 
+    
+    const hydratedFoods = session.foods.map((f: any) => {
+      let itemMacros = { calories: 0, protein: 0, carbs: 0, fats: 0 };
+      
+      // nested macros ONLY if they actually contain data (> 0)
+      if (f.macros?.calories > 0) {
+          itemMacros = { ...f.macros };
+      } 
+      // root level macros ONLY if they actually contain data (> 0)
+      else if (f.calories > 0) {
+          itemMacros = { calories: f.calories, protein: f.protein, carbs: f.carbs, fats: f.fats };
+      } 
+      // 3. If missing or 0, FORCE recalculation from the local foodDatabase
+      else {
+          const safeName = f.name?.trim().toLowerCase() || "";
+          const dbFood = foodDatabase.find((dbF: any) => dbF.name.trim().toLowerCase() === safeName);
+          const w = f.weight || 0;
+          
+          if (dbFood && dbFood.macros) {
+              itemMacros = {
+                  calories: Math.round((dbFood.macros.calories * w) / 100),
+                  protein: Math.round((dbFood.macros.protein * w) / 100),
+                  carbs: Math.round((dbFood.macros.carbs * w) / 100),
+                  fats: Math.round((dbFood.macros.fats * w) / 100),
+              };
+          }
+      }
+      
+      // Return the item with guaranteed macros attached to both standard locations
+      return { 
+        ...f, 
+        macros: itemMacros, 
+        calories: itemMacros.calories, 
+        protein: itemMacros.protein, 
+        carbs: itemMacros.carbs, 
+        fats: itemMacros.fats,
+        isSaved: false 
+      };
+    });
+
+    setFoodList(hydratedFoods); // Put the recalculated items on the plate
+    setOpenSessionId(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    speak("Session loaded. You can now modify the items and save to update.");
+  };
+
   const runAIAnalysis = async () => {
     const unsavedFoods = foodList.filter(f => !f.isSaved);
     
@@ -464,6 +530,7 @@ export default function HomePage() {
         // Update UI state to mark items as saved locally
         setFoodList(prev => prev.map(item => ({ ...item, isSaved: true })));
         setLoadingAI(false);
+        if (editingSessionId) setEditingSessionId(null);
         speak("Session saved locally. I will sync this when we are back online.");
       } catch (error) {
         console.error("Failed to save offline:", error);
@@ -484,9 +551,19 @@ export default function HomePage() {
 
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL;
-      const response = await axios.post(`${baseUrl}/api/user/session`, sessionData, { 
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      let response;
+      
+      if (editingSessionId) {
+        response = await axios.put(`${baseUrl}/api/user/session/${editingSessionId}`, sessionData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setEditingSessionId(null);
+      } else {
+        response = await axios.post(`${baseUrl}/api/user/session`, sessionData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+
       setAiResponse({ ...response.data, foods: foodList, totalMacros: plateTotals });
       
       await fetchHistory(token!);
@@ -526,13 +603,17 @@ export default function HomePage() {
     <div className="min-h-screen bg-slate-900 pb-24 text-slate-200 font-sans">
       
       {/* Onboarding only for new users */}
-      {!user.isProfileComplete && (
+      {!(user.isProfileComplete || user.profile?.isProfileComplete) && (
         <OnboardingModal 
           token={token} 
           onComplete={(upd: any) => {
-            const updatedUser = { ...user, profile: upd, isProfileComplete: true };
-            setUser(updatedUser); 
-            localStorage.setItem('user', JSON.stringify(updatedUser)); 
+            const updatedUser = { 
+              ...user, 
+              profile: { ...upd, isProfileComplete: true }, // Added here to match backend
+              isProfileComplete: true 
+            };
+            setUser(updatedUser);
+            localStorage.setItem('user', JSON.stringify(updatedUser));
             speak("Calibration complete. Welcome to your new lifestyle.");
           }} 
         />
@@ -543,7 +624,7 @@ export default function HomePage() {
         <div className="flex items-center gap-2">
            <button 
             onClick={handleBluetoothConnect} 
-            className={`flex items-center gap-1 text-[10px] font-bold px-3 py-1.5 rounded-full transition-all border ${
+            className={`flex items-center gap-1 text-[10px] font-bold px-3 py-1.5 rounded-full hover:bg-slate-600 transition-all border ${
               isBluetoothActive ? 'bg-emerald-500/10 border-emerald-500 text-emerald-500' : 'bg-slate-700 border-slate-600 text-slate-400'
             }`}
           >
@@ -556,6 +637,7 @@ export default function HomePage() {
 
       <main className="p-4 max-w-lg mx-auto space-y-6">
         
+        {/* HEADER / METRICS */}
         <header className="flex justify-between items-start">
           <div>
             <h1 className="text-2xl font-bold text-white tracking-tight">Hi, {user.name}</h1>
@@ -688,10 +770,10 @@ export default function HomePage() {
                      }}><Trash2 size={16} className="text-rose-400 hover:text-rose-300 transition-colors" /></button>
                   </div>
                   <div className="gap-3 text-xs text-slate-400 font-mono mt-2 bg-slate-800/50 p-2 rounded-lg inline-flex flex-wrap border border-slate-700/50">
-                    <span className="text-emerald-400 font-semibold">Cals: {convertUnit(item.macros.calories, unit)}</span>
-                    <span className="text-blue-400">Prot: {convertUnit(item.macros.protein, unit)}</span>
-                    <span className="text-amber-400">Carb: {convertUnit(item.macros.carbs, unit)}</span>
-                    <span className="text-rose-400">Fat: {convertUnit(item.macros.fats, unit)}</span>
+                    <span className="text-emerald-400 font-semibold">Cals: {convertUnit(item.macros?.calories ?? item.calories ?? 0, unit)}</span>
+                    <span className="text-blue-400">Prot: {convertUnit(item.macros?.protein ?? item.protein ?? 0, unit)}</span>
+                    <span className="text-amber-400">Carb: {convertUnit(item.macros?.carbs ?? item.carbs ?? 0, unit)}</span>
+                    <span className="text-rose-400">Fat: {convertUnit(item.macros?.fats ?? item.fats ?? 0, unit)}</span>
                   </div>
                 </div>
               </li>
@@ -711,12 +793,26 @@ export default function HomePage() {
           )}
 
           <button 
-            onClick={runAIAnalysis} 
-            disabled={loadingAI || foodList.filter(f => !f.isSaved).length === 0} 
-            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-4 rounded-2xl font-bold flex justify-center items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm uppercase tracking-wide shadow-lg shadow-emerald-900/20"
-          >
-            {loadingAI ? <Loader2 className="animate-spin" /> : foodList.filter(f => !f.isSaved).length === 0 && foodList.length > 0 ? "All Items Saved" : "Analyze & Save Meal"}
-          </button>
+              onClick={runAIAnalysis} 
+              disabled={loadingAI}
+              className="w-full bg-[#00ffa3] hover:bg-[#00e693] text-slate-900 py-4 rounded-2xl font-black flex justify-center items-center gap-2 mt-6 transition-all shadow-[0_0_20px_rgba(0,255,163,0.3)] hover:shadow-[0_0_30px_rgba(0,255,163,0.5)] text-lg uppercase tracking-wider"
+            >
+              {loadingAI ? <Loader2 className="animate-spin" /> : <Sparkles size={20} />}
+              {editingSessionId ? "Update Meal Session" : "Analyze & Save Meal"}
+            </button>
+            
+            {editingSessionId && (
+              <button 
+                onClick={() => {
+                  setEditingSessionId(null);
+                  setFoodList([]); 
+                  speak("Editing cancelled.");
+                }}
+                className="w-full mt-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white py-3.5 rounded-2xl font-bold transition-all text-sm uppercase tracking-wide"
+              >
+                Cancel Editing
+              </button>
+            )}
         </section>
 
         {/* LIVE ANALYSIS */}
@@ -763,7 +859,7 @@ export default function HomePage() {
 
                 {openSessionId === session._id && (
                   <div className="animate-in zoom-in-95 duration-300">
-                    <ReportCard data={session} globalUnit={unit} isHistory={true} onClose={closeHistory} />
+                    <ReportCard data={session} globalUnit={unit} isHistory={true} onEdit={handleEditSession} onDelete={handleDeleteSession} onClose={closeHistory} />
                   </div>
                 )}
               </div>
@@ -775,8 +871,8 @@ export default function HomePage() {
   );
 }
 
-// ReportCard Component handling both Live & Past Analysis data structures
-function ReportCard({ data, globalUnit, onClose, isHistory }: { data: any, globalUnit: string, onClose?: () => void, isHistory: boolean }) {
+// UPDATED: ReportCard Component handling both Live & Past Analysis data structures
+function ReportCard({ data, globalUnit, onClose, isHistory, onEdit, onDelete }: { data: any, globalUnit: string, onClose?: () => void, isHistory: boolean, onEdit?: (session: any) => void, onDelete?: (id: string) => void }) {
   // Fallback for total session macros
   const macrosToUse = data.macros || data.totalMacros || {};
 
@@ -795,6 +891,29 @@ function ReportCard({ data, globalUnit, onClose, isHistory }: { data: any, globa
       </div>
       
       <div className="p-6 space-y-6">
+
+        {/* EDIT AND DELETE BUTTONS MOVED TO TOP (BELOW PAST ANALYSIS HEADER) */}
+        {isHistory && onEdit && onDelete && (
+           <div className="flex gap-3 pb-4 border-b border-slate-800/50">
+             <button 
+               onClick={(e) => { e.stopPropagation(); onEdit(data); }}
+               className="flex-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 py-2.5 rounded-xl flex items-center justify-center gap-2 text-xs font-bold transition-colors border border-blue-500/20 uppercase tracking-wider"
+             >
+               <Edit2 size={14} /> Edit
+             </button>
+             <button 
+               onClick={(e) => { 
+                 e.stopPropagation(); 
+                 onDelete(data._id || data.id); 
+               }}
+               className="flex-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 py-2.5 rounded-xl flex items-center justify-center gap-2 text-xs font-bold transition-colors border border-rose-500/20 uppercase tracking-wider"
+             >
+               <Trash2 size={14} /> Delete
+             </button>
+           </div>
+        )}
+
+
         {/* Total Session Macros Grid */}
         <div className="grid grid-cols-4 gap-2">
           <MacroTile label="Cals" value={`${convertUnit(macrosToUse.calories || 0, globalUnit)}${globalUnit}`} color="text-[#00ffa3]" />
@@ -810,24 +929,14 @@ function ReportCard({ data, globalUnit, onClose, isHistory }: { data: any, globa
             <div className="space-y-2">
               {data.foods.map((f: any, i: number) => {
                 
-                
-                // Define variables to hold the values to display
-                let dCalories = 0, dProtein = 0, dCarbs = 0, dFats = 0;
+                // CRASH & ZERO FIX: If database completely stripped the macro numbers, recalculate them instantly using the foodDatabase
+                const dbFood = foodDatabase.find((dbF: any) => dbF.name.toLowerCase() === f.name?.toLowerCase());
+                const w = f.weight || 0;
 
-                if (isHistory) {
-                    // PAST ANALYSIS: Use root properties (f.calories, f.protein...)
-                    dCalories = f.calories || 0;
-                    dProtein  = f.protein || 0;
-                    dCarbs    = f.carbs || 0;
-                    dFats     = f.fats || 0;
-                } else {
-                    // EXPERT ANALYSIS (Live): Use nested macros object (f.macros.calories...)
-                    const m = f.macros || {};
-                    dCalories = m.calories || 0;
-                    dProtein  = m.protein || 0;
-                    dCarbs    = m.carbs || 0;
-                    dFats     = m.fats || 0;
-                }
+                const dCalories = f.macros?.calories || f.calories || (dbFood ? Math.round((dbFood.macros.calories * w) / 100) : 0);
+                const dProtein  = f.macros?.protein || f.protein || (dbFood ? Math.round((dbFood.macros.protein * w) / 100) : 0);
+                const dCarbs    = f.macros?.carbs || f.carbs || (dbFood ? Math.round((dbFood.macros.carbs * w) / 100) : 0);
+                const dFats     = f.macros?.fats || f.fats || (dbFood ? Math.round((dbFood.macros.fats * w) / 100) : 0);
 
                 return (
                   <div key={i} className="flex flex-col p-3 bg-[#111827] rounded-xl border border-slate-800/50">
@@ -905,6 +1014,10 @@ function ReportCard({ data, globalUnit, onClose, isHistory }: { data: any, globa
             </div>
         </div>
         )}
+        
+  
+        
+        
       </div>
       
       {/* Quote Footer */}

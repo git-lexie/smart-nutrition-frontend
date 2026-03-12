@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import { ArrowLeft, Save, LogOut, Volume2 } from 'lucide-react'; 
+import { ArrowLeft, Save, LogOut, Volume2 } from 'lucide-react'; // Added Volume2 icon
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -18,7 +18,7 @@ export default function ProfilePage() {
     gender: 'Other',
     activityLevel: 'Sedentary (office job)',
     goal: 'Maintenance',
-    voiceGender: 'female' 
+    voiceGender: 'female' // NEW: Added Voice Preference state
   });
   
   const [token, setToken] = useState('');
@@ -45,7 +45,7 @@ export default function ProfilePage() {
       gender: u.profile?.gender || 'Other',
       activityLevel: u.profile?.activityLevel || 'Sedentary (office job)',
       goal: u.profile?.goal || 'Maintenance',
-      voiceGender: u.profile?.voiceGender || 'female' // Hydrate Voice Preference
+      voiceGender: u.profile?.voiceGender || 'female' // NEW: Hydrate Voice Preference
     });
   }, [router]);
 
@@ -62,7 +62,7 @@ export default function ProfilePage() {
       });
 
       if (response.data.success) {
-        // Update LocalStorage so the changes reflect on the Dashboard immediately
+        // 2. Update LocalStorage so the changes reflect on the Dashboard immediately
         const oldUserData = JSON.parse(localStorage.getItem('user') || '{}');
         const updatedUser = { 
           ...oldUserData, 

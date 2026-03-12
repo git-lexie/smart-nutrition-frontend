@@ -13,88 +13,151 @@ export default function SignupPage() {
   const [showConfirmPass, setShowConfirmPass] = useState(false);
   const [isLoading, setIsLoading] = useState(false); 
 
+  // Basic email validation regex
+  const validateEmail = (email: string) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setError(''); 
+    e.preventDefault();
+    setError(''); 
 
-  if (formData.password !== formData.confirmPassword) {
-    return setError('Passwords do not match');
-  }
-
-  setIsLoading(true);
-
-  try {
-    
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-    
-    const endpoint = `${baseUrl}/api/auth/signup`;
-    
-    console.log("Attempting to connect to:", endpoint); 
-    
-    await axios.post(endpoint, formData);
-    
-    router.push('/login');
-  } catch (err: any) { 
-    console.error("Signup Error Details:", err); 
-    
-    // More specific error handling
-    if (!err.response) {
-      setError('Cannot connect to server. Ensure the backend is running.');
-    } else {
-      setError(err.response?.data?.message || 'Signup failed.');
+    // 1. Validate Email Format First
+    if (!validateEmail(formData.email)) {
+      return setError('Please enter a valid email address.');
     }
-  } finally {
-    setIsLoading(false);
-  }
-};
+
+    // 2. Validate Password Match
+    if (formData.password !== formData.confirmPassword) {
+      return setError('Passwords do not match.');
+    }
+
+    // 3. Validate Password Length 
+    if (formData.password.length < 6) {
+       return setError('Password must be at least 6 characters long.');
+    }
+
+    setIsLoading(true);
+
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const endpoint = `${baseUrl}/api/auth/signup`;
+      
+      console.log("Attempting to connect to:", endpoint); 
+      
+      await axios.post(endpoint, {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password
+      });
+      
+      router.push('/login');
+    } catch (err: any) { 
+      console.error("Signup Error Details:", err); 
+      
+      if (!err.response) {
+        setError('Cannot connect to server. Ensure the backend is running.');
+      } else {
+        setError(err.response?.data?.message || 'Signup failed.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
-  <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
-    <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8">
-      <h1 className="text-2xl font-bold text-center mb-6 dark:text-white">Create Account</h1>
-      
-      {error && <div className="mb-4 text-red-500 bg-red-100 p-2 rounded text-center text-sm">{error}</div>}
-      
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Name Field */}
-        <div className="relative">
-          <User className="absolute left-3 top-3.5 text-slate-400" size={20}/>
-          <input required type="text" placeholder="Name" className="w-full pl-10 p-3 border rounded-lg dark:bg-slate-700 dark:text-white" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
-        </div>
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
+      <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8">
+        <h1 className="text-2xl font-bold text-center mb-6 dark:text-white">Create Account</h1>
         
-        {/* Email Field */}
-        <div className="relative">
-          <Mail className="absolute left-3 top-3.5 text-slate-400" size={20}/>
-          <input required type="email" placeholder="Email" className="w-full pl-10 p-3 border rounded-lg dark:bg-slate-700 dark:text-white" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
-        </div>
+        {error && <div className="mb-4 text-red-500 bg-red-100 p-2 rounded text-center text-sm font-medium">{error}</div>}
         
-        {/* Password Field */}
-        <div className="relative">
-          <Lock className="absolute left-3 top-3.5 text-slate-400" size={20}/>
-          <input required type={showPass ? "text" : "password"} placeholder="Password" className="w-full pl-10 pr-10 p-3 border rounded-lg dark:bg-slate-700 dark:text-white" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
-          <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-3.5 text-slate-400">
-            {showPass ? <EyeOff size={20}/> : <Eye size={20}/>}
-          </button>
-        </div>
-        
-        {/* Confirm Password Field (Updated) */}
-        <div className="relative">
-          <Lock className="absolute left-3 top-3.5 text-slate-400" size={20}/>
-          <input required type={showConfirmPass ? "text" : "password"} placeholder="Confirm Password" className="w-full pl-10 pr-10 p-3 border rounded-lg dark:bg-slate-700 dark:text-white" value={formData.confirmPassword} onChange={e => setFormData({...formData, confirmPassword: e.target.value})} />
-          <button type="button" onClick={() => setShowConfirmPass(!showConfirmPass)} className="absolute right-3 top-3.5 text-slate-400">
-            {showConfirmPass ? <EyeOff size={20}/> : <Eye size={20}/>}
-          </button>
-        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Name Field */}
+          <div className="relative">
+            <User className="absolute left-3 top-3.5 text-slate-400" size={20}/>
+            <input 
+              required 
+              type="text" 
+              placeholder="Full Name" 
+              className="w-full pl-10 p-3 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:bg-slate-700 dark:text-white transition-all" 
+              value={formData.name} 
+              onChange={e => setFormData({...formData, name: e.target.value})} 
+            />
+          </div>
+          
+          {/* Email Field */}
+          <div className="relative">
+            <Mail className="absolute left-3 top-3.5 text-slate-400" size={20}/>
+            <input 
+              required 
+              type="email" 
+              placeholder="Email Address" 
+              className="w-full pl-10 p-3 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:bg-slate-700 dark:text-white transition-all" 
+              value={formData.email} 
+              onChange={e => setFormData({...formData, email: e.target.value})} 
+            />
+          </div>
+          
+          {/* Password Field */}
+          <div className="relative">
+            <Lock className="absolute left-3 top-3.5 text-slate-400" size={20}/>
+            <input 
+              required 
+              type={showPass ? "text" : "password"} 
+              placeholder="Password" 
+              className="w-full pl-10 pr-10 p-3 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:bg-slate-700 dark:text-white transition-all" 
+              value={formData.password} 
+              onChange={e => setFormData({...formData, password: e.target.value})} 
+            />
+            <button 
+              type="button" 
+              onClick={() => setShowPass(!showPass)} 
+              className="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+            >
+              {showPass ? <EyeOff size={20}/> : <Eye size={20}/>}
+            </button>
+          </div>
+          
+          {/* Confirm Password Field */}
+          <div className="relative">
+            <Lock className="absolute left-3 top-3.5 text-slate-400" size={20}/>
+            <input 
+              required 
+              type={showConfirmPass ? "text" : "password"} 
+              placeholder="Confirm Password" 
+              className="w-full pl-10 pr-10 p-3 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:bg-slate-700 dark:text-white transition-all" 
+              value={formData.confirmPassword} 
+              onChange={e => setFormData({...formData, confirmPassword: e.target.value})} 
+            />
+            <button 
+              type="button" 
+              onClick={() => setShowConfirmPass(!showConfirmPass)} 
+              className="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+            >
+              {showConfirmPass ? <EyeOff size={20}/> : <Eye size={20}/>}
+            </button>
+          </div>
 
-        <button type="submit" disabled={isLoading} className="w-full bg-emerald-600 text-white py-3 rounded-lg font-bold hover:bg-emerald-700 disabled:opacity-50">
-          {isLoading ? 'Creating Account...' : 'Sign Up'}
-        </button>
-      </form>
-      
-      <div className="mt-4 text-center text-sm dark:text-slate-300">
-        Already have an account? <Link href="/login" className="text-emerald-600 font-bold">Login</Link>
+          <button 
+            type="submit" 
+            disabled={isLoading} 
+            className="w-full bg-emerald-600 text-white py-3 rounded-lg font-bold hover:bg-emerald-700 disabled:opacity-70 disabled:cursor-not-allowed transition-colors shadow-md flex justify-center items-center"
+          >
+            {isLoading ? (
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            ) : 'Sign Up'}
+          </button>
+        </form>
+        
+        <div className="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">
+          Already have an account? <Link href="/login" className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline">Log in here</Link>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
 }
