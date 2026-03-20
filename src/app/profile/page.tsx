@@ -54,10 +54,10 @@ export default function ProfilePage() {
     setLoading(true);
     
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      // const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
       
       // 1. Send update to Backend
-      const response = await axios.put(`${baseUrl}/api/user/profile`, data, { 
+      const response = await axios.put(`/api/user/profile`, data, { 
         headers: { Authorization: `Bearer ${token}` } 
       });
 

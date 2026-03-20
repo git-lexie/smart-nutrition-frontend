@@ -13,7 +13,6 @@ export default function SignupPage() {
   const [showConfirmPass, setShowConfirmPass] = useState(false);
   const [isLoading, setIsLoading] = useState(false); 
 
-  // Basic email validation regex
   const validateEmail = (email: string) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return re.test(email);
@@ -23,17 +22,14 @@ export default function SignupPage() {
     e.preventDefault();
     setError(''); 
 
-    // 1. Validate Email Format First
     if (!validateEmail(formData.email)) {
       return setError('Please enter a valid email address.');
     }
 
-    // 2. Validate Password Match
     if (formData.password !== formData.confirmPassword) {
       return setError('Passwords do not match.');
     }
 
-    // 3. Validate Password Length 
     if (formData.password.length < 6) {
        return setError('Password must be at least 6 characters long.');
     }
@@ -41,9 +37,7 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-      const endpoint = `${baseUrl}/api/auth/signup`;
-      
+      const endpoint = '/api/auth/signup';
       console.log("Attempting to connect to:", endpoint); 
       
       await axios.post(endpoint, {
@@ -59,6 +53,7 @@ export default function SignupPage() {
       if (!err.response) {
         setError('Cannot connect to server. Ensure the backend is running.');
       } else {
+        // This will now show the EXACT reason it crashed from the backend!
         setError(err.response?.data?.message || 'Signup failed.');
       }
     } finally {
@@ -71,10 +66,9 @@ export default function SignupPage() {
       <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8">
         <h1 className="text-2xl font-bold text-center mb-6 dark:text-white">Create Account</h1>
         
-        {error && <div className="mb-4 text-red-500 bg-red-100 p-2 rounded text-center text-sm font-medium">{error}</div>}
+        {error && <div className="mb-4 text-red-500 bg-red-100 p-3 rounded-lg text-center text-sm font-bold border border-red-200">{error}</div>}
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Name Field */}
           <div className="relative">
             <User className="absolute left-3 top-3.5 text-slate-400" size={20}/>
             <input 
@@ -87,7 +81,6 @@ export default function SignupPage() {
             />
           </div>
           
-          {/* Email Field */}
           <div className="relative">
             <Mail className="absolute left-3 top-3.5 text-slate-400" size={20}/>
             <input 
@@ -100,7 +93,6 @@ export default function SignupPage() {
             />
           </div>
           
-          {/* Password Field */}
           <div className="relative">
             <Lock className="absolute left-3 top-3.5 text-slate-400" size={20}/>
             <input 
@@ -120,7 +112,6 @@ export default function SignupPage() {
             </button>
           </div>
           
-          {/* Confirm Password Field */}
           <div className="relative">
             <Lock className="absolute left-3 top-3.5 text-slate-400" size={20}/>
             <input 

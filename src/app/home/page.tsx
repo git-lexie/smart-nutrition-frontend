@@ -6,7 +6,7 @@ import axios from 'axios';
 import { connectScale } from '@/lib/bluetooth';
 import { saveOfflineSession, getOfflineSessions, clearSyncedSessions } from '@/lib/db'; 
 import OnboardingModal from '@/components/OnboardingModal';
-import foodDatabase from '@/components/foodDatabase'; 
+import foodDatabase from '../data/foodDatabase'; 
 import { 
   User, Activity, Bluetooth, Plus, Trash2, Edit2,
   Loader2, Sparkles, History, Dumbbell, ChevronRight, X, Timer, Zap, Mic, Volume2, Info
@@ -154,8 +154,8 @@ export default function HomePage() {
   // --- 1. DATA PERSISTENCE & SYNC ---
   const fetchHistory = useCallback(async (authToken: string) => {
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL;
-      const res = await axios.get(`${baseUrl}/api/user/history?limit=10`, {
+      // const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+      const res = await axios.get(`/api/user/history?limit=10`, {
         headers: { Authorization: `Bearer ${authToken}` }
       });
       setHistory(res.data);
@@ -170,8 +170,8 @@ export default function HomePage() {
 
     setIsSyncing(true);
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL;
-      await axios.post(`${baseUrl}/api/user/sync`, { sessions: offlineData }, {
+      // const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+      await axios.post(`/api/user/sync`, { sessions: offlineData }, {
         headers: { Authorization: `Bearer ${authToken}` }
       });
       
@@ -436,8 +436,8 @@ export default function HomePage() {
   const handleDeleteSession = async (id: string) => {
     if (!confirm("Are you sure you want to delete this session?")) return;
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL;
-      await axios.delete(`${baseUrl}/api/user/session/${id}`, {
+      // const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+      await axios.delete(`/api/user/session/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setHistory(prev => prev.filter(s => s._id !== id));
@@ -550,16 +550,16 @@ export default function HomePage() {
     };
 
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+      // const baseUrl = process.env.NEXT_PUBLIC_API_URL;
       let response;
       
       if (editingSessionId) {
-        response = await axios.put(`${baseUrl}/api/user/session/${editingSessionId}`, sessionData, {
+        response = await axios.put(`/api/user/session/${editingSessionId}`, sessionData, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setEditingSessionId(null);
       } else {
-        response = await axios.post(`${baseUrl}/api/user/session`, sessionData, {
+        response = await axios.post(`/api/user/session`, sessionData, {
           headers: { Authorization: `Bearer ${token}` }
         });
       }

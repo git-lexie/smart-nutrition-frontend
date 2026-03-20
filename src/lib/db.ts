@@ -1,9 +1,10 @@
-import Dexie, { Table } from 'dexie';
+
 
 /**
  * Interface representing the Meal Log structure
  * Consistent with the hybrid schema for IndexedDB to MongoDB sync.
  */
+import Dexie, { Table } from 'dexie';
 export interface MealLog {
   id?: number;
   local_user_id: string; // Linking to MongoDB User collection
