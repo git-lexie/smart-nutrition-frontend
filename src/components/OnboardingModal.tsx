@@ -88,6 +88,7 @@ export default function OnboardingModal({
               >
                 <option>Male</option>
                 <option>Female</option>
+                <option>Intersex</option>
               </select>
             </div>
           </div>
