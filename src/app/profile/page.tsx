@@ -102,7 +102,7 @@ export default function ProfilePage() {
   };
 
   const goals = ["Weight Loss", "Maintenance", "Muscle Gain"];
-  const sexs = ["Male", "Female", "Other"];
+  const sexs = ["Male", "Female", "Intersex"]; // Added Intersex option
   const activityLevels = [
     "Sedentary (office job)",
     "Light Exercise (1-2 days/week)",
