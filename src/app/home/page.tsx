@@ -220,7 +220,7 @@ export default function HomePage() {
 
   // --- 2. VOICE & WELCOME LOGIC ---
   useEffect(() => {
-    if (user && user.name) {
+    if (user && user.firstName) {
       const hasWelcomed = sessionStorage.getItem('hasWelcomed');
       if (!hasWelcomed) {
           const hour = new Date().getHours();
@@ -228,7 +228,7 @@ export default function HomePage() {
           const timeGreeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
           
           setTimeout(() => {
-            speak(`${timeGreeting}, ${user.name}. Your expert coach is ready. Please place an item on the scale to begin tracking.`);
+            speak(`${timeGreeting}, ${user.firstName}. Your expert coach is ready. Please place an item on the scale to begin tracking.`);
             sessionStorage.setItem('hasWelcomed', 'true');
           }, 1000);
       }
@@ -640,7 +640,7 @@ export default function HomePage() {
         {/* HEADER / METRICS */}
         <header className="flex justify-between items-start">
           <div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">Hi, {user.name}</h1>
+            <h1 className="text-2xl font-bold text-white tracking-tight">Hi, {user.firstName}</h1>
             <p className="text-emerald-400 text-sm font-medium italic capitalize flex items-center gap-1">
               Target: {user.profile?.goal?.replace('_', ' ') || "Maintenance"}
             </p>
