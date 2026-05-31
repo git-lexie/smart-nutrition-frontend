@@ -10,16 +10,22 @@ export async function POST(req: Request) {
     
     // 2. Get Data
     const { firstName, middleName, lastName, email, password } = await req.json();
-
+    
     // 3. Validate required name fields
     if (!firstName?.trim() || !lastName?.trim()) {
-      return NextResponse.json({ message: "First name and last name are required." }, { status: 400 });
+      return NextResponse.json(
+        { message: "First name and last name are required." },
+        { status: 400 }
+      );
     }
 
     // 4. Check if user exists
     let user = await User.findOne({ email });
     if (user) {
-      return NextResponse.json({ message: "User already exists with this email" }, { status: 400 });
+      return NextResponse.json(
+        { message: "User already exists with this email" }, 
+        { status: 400 }
+      );
     }
 
     // 5. Hash Password
@@ -27,15 +33,27 @@ export async function POST(req: Request) {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     // 6. Create User
-    user = await User.create({ firstName, middleName, lastName, email, password: hashedPassword });
+    user = await User.create({ 
+      firstName, 
+      middleName, 
+      lastName, 
+      email, 
+      password: hashedPassword 
+    });
     
-    return NextResponse.json({ message: "User created successfully!" }, { status: 201 });
+    return NextResponse.json(
+      { message: "User created successfully!" }, 
+      { status: 201 }
+    );
     
   } catch (err: any) {
     console.error("🔴 BACKEND SIGNUP ERROR:", err); 
     
     // THIS IS THE MAGIC FIX: We are now sending the EXACT error to the frontend!
     const errorMessage = err instanceof Error ? err.message : "Unknown Server Error";
-    return NextResponse.json({ message: `Crash Reason: ${errorMessage}` }, { status: 500 });
+    return NextResponse.json(
+      { message: `Crash Reason: ${errorMessage}` },
+      { status: 500 }
+    );
   }
 }
