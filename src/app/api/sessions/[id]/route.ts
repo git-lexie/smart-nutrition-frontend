@@ -15,14 +15,17 @@ const logUserAction = async (userId: any, action: string, details = {}) => {
 };
 
 // UPDATE / EDIT SESSION
-export async function PUT(req: any, context: { params: { id: string } }) {
+export async function PUT(
+  req: any,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const decoded = verifyAuth(req);
     if (!decoded)
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
     await dbConnect();
-    const sessionId = context.params.id; // Fixed Next.js param access
+    const sessionId = (await params).id; // Fixed Next.js param access
     const { foods, totalMacros, date } = await req.json(); // Fixed missing ()
 
     const session = await DietarySession.findOne({
@@ -90,22 +93,19 @@ export async function PUT(req: any, context: { params: { id: string } }) {
 }
 
 // DELETE SESSION
-export async function DELETE(req: any, context: { params: { id: string } }) {
+export async function DELETE(
+  req: any, 
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const decoded = verifyAuth(req);
     if (!decoded)
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
     await dbConnect();
-    const sessionId = context.params.id;
-    const session = await DietarySession.findOne({
-      _id: sessionId,
-      userId: decoded.id,
-    });
-    if (!session)
-      return NextResponse.json({
-        message: "Session not found or unauthorized",
-      });
+    const sessionId = (await params).id;
+    const session = await DietarySession.findOne({ _id: sessionId, userId: decoded.id });
+    if (!session) return NextResponse.json({ message: "Session not found or unauthorized" });
 
     await DietarySession.deleteOne({ _id: sessionId, userId: decoded.id });
     await logUserAction(decoded.id, "SESSION_DELETED", { sessionId });

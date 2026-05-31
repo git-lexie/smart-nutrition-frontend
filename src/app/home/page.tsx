@@ -195,7 +195,7 @@ export default function HomePage() {
   const fetchHistory = useCallback(async (authToken: string) => {
     try {
       // const baseUrl = process.env.NEXT_PUBLIC_API_URL;
-      const res = await axios.get(`/api/user/history?limit=10`, {
+      const res = await axios.get(`/api/sessions?limit=10`, {
         headers: { Authorization: `Bearer ${authToken}` },
       });
       setHistory(res.data);
@@ -213,7 +213,7 @@ export default function HomePage() {
       try {
         // const baseUrl = process.env.NEXT_PUBLIC_API_URL;
         await axios.post(
-          `/api/user/sync`,
+          `/api/sessions/sync`,
           { sessions: offlineData },
           {
             headers: { Authorization: `Bearer ${authToken}` },
@@ -268,7 +268,7 @@ export default function HomePage() {
 
   // --- 2. VOICE & WELCOME LOGIC ---
   useEffect(() => {
-    if (user && user.name) {
+    if (user && user.firstName) {
       const hasWelcomed = sessionStorage.getItem("hasWelcomed");
       if (!hasWelcomed) {
         const hour = new Date().getHours();
@@ -282,7 +282,7 @@ export default function HomePage() {
 
         setTimeout(() => {
           speak(
-            `${timeGreeting}, ${user.name}. Your expert coach is ready. Please place an item on the scale to begin tracking.`,
+            `${timeGreeting}, ${user.firstName}. Your expert coach is ready. Please place an item on the scale to begin tracking.`,
           );
           sessionStorage.setItem("hasWelcomed", "true");
         }, 1000);
@@ -544,7 +544,7 @@ export default function HomePage() {
     if (!confirm("Are you sure you want to delete this session?")) return;
     try {
       // const baseUrl = process.env.NEXT_PUBLIC_API_URL;
-      await axios.delete(`/api/user/session/${id}`, {
+      await axios.delete(`/api/sessions/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setHistory((prev) => prev.filter((s) => s._id !== id));
@@ -673,7 +673,7 @@ export default function HomePage() {
 
       if (editingSessionId) {
         response = await axios.put(
-          `/api/user/session/${editingSessionId}`,
+          `/api/sessions/${editingSessionId}`,
           sessionData,
           {
             headers: { Authorization: `Bearer ${token}` },
@@ -681,7 +681,7 @@ export default function HomePage() {
         );
         setEditingSessionId(null);
       } else {
-        response = await axios.post(`/api/user/session`, sessionData, {
+        response = await axios.post(`/api/sessions`, sessionData, {
           headers: { Authorization: `Bearer ${token}` },
         });
       }

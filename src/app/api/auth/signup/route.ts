@@ -10,6 +10,8 @@ export async function POST(req: Request) {
     
     // 2. Get Data
     const { firstName, middleName, lastName, email, password } = await req.json();
+    
+    // 3. Validate required name fields
     if (!firstName?.trim() || !lastName?.trim()) {
       return NextResponse.json(
         { message: "First name and last name are required." },
@@ -17,7 +19,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3. Check if user exists
+    // 4. Check if user exists
     let user = await User.findOne({ email });
     if (user) {
       return NextResponse.json(
@@ -26,7 +28,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 4. Hash Password
+    // 5. Hash Password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
